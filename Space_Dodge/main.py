@@ -33,12 +33,16 @@ BLUE = (0, 0, 255)
 
 YELLOW = (255, 255, 0)
 
+GREY = (104,104,104)
+
 
 # Set up the window
 
 GAME_WINDOW = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
 GAME_BORDER = pygame.Rect((WINDOW_WIDTH//2) - (GAME_BORDER_WIDTH//2) ,0,10,WINDOW_HEIGHT)
+
+GAME_STATS = pygame.Rect(0,0,WINDOW_WIDTH,60)
 # Define FONTS
 
 HEALTH_FONT = pygame.font.SysFont('arial', 30)
@@ -95,29 +99,58 @@ RED_HIT = pygame.USEREVENT + 2
 
 
 
-def draw(red,yellow,red_bullets,yellow_bullets, red_health , yellow_health):
-    # order in which we draw things matter like z-index , i.e every draw is layered on top of another draw
+def draw(red, yellow, red_bullets, yellow_bullets, red_health, yellow_health, red_ammo, yellow_ammo):
+    # Clear background and draw borders
+    GAME_WINDOW.blit(BACKGROUND_IMAGE, (0, 0))
+    pygame.draw.rect(GAME_WINDOW, WHITE, GAME_BORDER)
+    
+    # Render health and ammo texts
+    red_health_text = HEALTH_FONT.render(f"Health: {red_health}", 1, RED)
+    yellow_health_text = HEALTH_FONT.render(f"Health: {yellow_health}", 1, YELLOW)
+    red_ammo_text = HEALTH_FONT.render(f"Ammo Left: {red_ammo}", 1, RED)
+    yellow_ammo_text = HEALTH_FONT.render(f"Ammo Left: {yellow_ammo}", 1, YELLOW)
 
-    GAME_WINDOW.blit(BACKGROUND_IMAGE, (0,0))
-    pygame.draw.rect(GAME_WINDOW, WHITE , GAME_BORDER)
-    red_health_text = HEALTH_FONT.render("Health: "+ str(red_health),1,RED)
-    yellow_health_text = HEALTH_FONT.render("Health: "+ str(yellow_health),1,YELLOW)
+    # Calculate the maximum width of any text
+    max_width = max(red_health_text.get_width(), yellow_health_text.get_width(), 
+                    red_ammo_text.get_width(), yellow_ammo_text.get_width())
+    
+    # Add some padding around the texts
+    padding = 10
 
+    # Dynamically resize the width of GAME_STATS to fit the longest text
+    GAME_STATS.width = WINDOW_WIDTH  # Extra padding for left and right
+    
+    # Dynamically resize the height of GAME_STATS to fit two lines of text
+    GAME_STATS.height = max(red_health_text.get_height(), red_ammo_text.get_height()) * 2 + padding  # Two lines of text
 
-    GAME_WINDOW.blit(red_health_text, (WINDOW_WIDTH - red_health_text.get_width()-10 , 10))
-    GAME_WINDOW.blit(yellow_health_text, (10, 10))
+    # Draw background for the stats
+    pygame.draw.rect(GAME_WINDOW, GREY, GAME_STATS)
 
-    GAME_WINDOW.blit(YELLOW_SPACESHIP,(yellow.x,yellow.y))
-    GAME_WINDOW.blit(RED_SPACESHIP, (red.x,red.y))
+    # Set vertical offset for positioning
+    vertical_offset = padding
 
+    # Draw Red Health and Ammo
+    GAME_WINDOW.blit(red_health_text, (WINDOW_WIDTH - red_health_text.get_width() - padding, vertical_offset))
+    GAME_WINDOW.blit(red_ammo_text, (WINDOW_WIDTH - red_ammo_text.get_width() - padding, vertical_offset + red_health_text.get_height()))
+
+    # Draw Yellow Health and Ammo
+    GAME_WINDOW.blit(yellow_health_text, (padding, vertical_offset))
+    GAME_WINDOW.blit(yellow_ammo_text, (padding, vertical_offset + yellow_health_text.get_height()))
+
+    # Draw the spaceships
+    GAME_WINDOW.blit(YELLOW_SPACESHIP, (yellow.x, yellow.y))
+    GAME_WINDOW.blit(RED_SPACESHIP, (red.x, red.y))
+
+    # Draw bullets for both players
     for yellow_bullet in yellow_bullets:
         pygame.draw.rect(GAME_WINDOW, YELLOW, yellow_bullet)
 
     for red_bullet in red_bullets:
         pygame.draw.rect(GAME_WINDOW, RED, red_bullet)
 
-    
+    # Update the display
     pygame.display.update()
+
 
 
 # handle user inputs
@@ -127,7 +160,7 @@ def yellow_handle_movement(keys_pressed , yellow):
         yellow.x -= SPACESHIP_VELOCITY
     if keys_pressed[pygame.K_d] and (yellow.x+SPACESHIP_VELOCITY+SPACESHIP_WIDTH-(GAME_BORDER_WIDTH/2))<(GAME_BORDER.x): #right
         yellow.x += SPACESHIP_VELOCITY
-    if keys_pressed[pygame.K_w] and yellow.y-SPACESHIP_VELOCITY>0: #up
+    if keys_pressed[pygame.K_w] and yellow.y-SPACESHIP_VELOCITY-GAME_STATS.height>0: #up
         yellow.y -= SPACESHIP_VELOCITY
     if keys_pressed[pygame.K_s] and (yellow.y+SPACESHIP_VELOCITY+SPACESHIP_HEIGHT)<(WINDOW_HEIGHT): #down
         yellow.y += SPACESHIP_VELOCITY
@@ -137,7 +170,7 @@ def red_handle_movement(keys_pressed , red):
         red.x -= SPACESHIP_VELOCITY
     if keys_pressed[pygame.K_RIGHT] and red.x+SPACESHIP_WIDTH+SPACESHIP_VELOCITY<(WINDOW_WIDTH): #right
         red.x += SPACESHIP_VELOCITY
-    if keys_pressed[pygame.K_UP] and (red.y-SPACESHIP_VELOCITY)>0: #up
+    if keys_pressed[pygame.K_UP] and (red.y-SPACESHIP_VELOCITY-GAME_STATS.height)>0: #up
         red.y -= SPACESHIP_VELOCITY
     if keys_pressed[pygame.K_DOWN] and (red.y+SPACESHIP_VELOCITY+SPACESHIP_HEIGHT)<WINDOW_HEIGHT: #down
         red.y += SPACESHIP_VELOCITY
@@ -160,17 +193,28 @@ def handle_bullets(yellow_bullets, red_bullets , yellow, red):
             red_bullets.remove(red_bullet)
 
 def display_winner(text):
-    draw_text = WINNER_FONT.render(text,1,YELLOW if text=='YELLOW WINS!' else RED)
+    if text=='YELLOW WINS!':
+        draw_text = WINNER_FONT.render(text,1,YELLOW)
+    elif text=='RED WINS!':
+        draw_text = WINNER_FONT.render(text,1,RED)
+    elif text == 'IT IS A DRAW!':
+        draw_text = WINNER_FONT.render(text,1,WHITE)
     
     GAME_WINDOW.blit(draw_text,( ((WINDOW_WIDTH/2)-(draw_text.get_width()/2))  , (WINDOW_HEIGHT/2 - draw_text.get_height()/2)) )
     pygame.display.update()
-    pygame.time.delay(4000)
-    main()
     
+def reset_main():
+    red = pygame.Rect(800,300,SPACESHIP_WIDTH,SPACESHIP_HEIGHT)
+    yellow = pygame.Rect(100,300,SPACESHIP_WIDTH,SPACESHIP_HEIGHT)
+    red_bullets = []
+    yellow_bullets = []
+    red_health = 10
+    yellow_health = 10
+    red_ammo = 50
+    yellow_ammo=50
 
+    return red, yellow, yellow_bullets, red_bullets, red_health, yellow_health, red_ammo, yellow_ammo
     
-
-
 
 
 def main():
@@ -182,6 +226,9 @@ def main():
 
     red_health = 10
     yellow_health = 10
+
+    red_ammo = 50
+    yellow_ammo = 50
 
     # Game loop
     clock = pygame.time.Clock()
@@ -199,10 +246,12 @@ def main():
                     pygame.quit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LCTRL and len(yellow_bullets)<MAX_BULLETS:
+                if event.key == pygame.K_LCTRL and len(yellow_bullets)<MAX_BULLETS and yellow_ammo>0:
+                    yellow_ammo -=1  # decrease ammo count when shooting
                     yellow_bullet=pygame.Rect(yellow.x+SPACESHIP_WIDTH, yellow.y+(SPACESHIP_HEIGHT//2) , BULLET_WIDTH, BULLET_HEIGHT)
                     yellow_bullets.append(yellow_bullet)
-                if event.key == pygame.K_RCTRL and len(red_bullets)<MAX_BULLETS:
+                if event.key == pygame.K_RCTRL and len(red_bullets)<MAX_BULLETS and red_ammo>0:
+                    red_ammo -=1  # decrease ammo count when shooting
                     red_bullet=pygame.Rect(red.x,red.y+(SPACESHIP_HEIGHT//2), BULLET_WIDTH, BULLET_HEIGHT)
                     red_bullets.append(red_bullet)
             
@@ -221,8 +270,19 @@ def main():
         if red_health<=0:
             winner_text = "YELLOW WINS!"
         
+        if red_ammo == 0 and yellow_ammo == 0 and red_bullets==[] and yellow_bullets==[]:
+            if red_health>yellow_health:
+                winner_text = "RED WINS!"
+            elif yellow_health>red_health:
+                winner_text = "YELLOW WINS!"
+            elif red_health == yellow_health:
+                winner_text = "IT IS A DRAW!"
+        
         if winner_text!= '':
             display_winner(winner_text)
+            pygame.time.delay(4000)
+            pygame.event.clear()
+            red, yellow, yellow_bullets, red_bullets, red_health, yellow_health, red_ammo, yellow_ammo = reset_main()
             
 
 
@@ -232,7 +292,8 @@ def main():
 
         handle_bullets(yellow_bullets,red_bullets,yellow,red)
 
-        draw(red,yellow, red_bullets, yellow_bullets, red_health, yellow_health)
+        draw(red,yellow, red_bullets, yellow_bullets, red_health, yellow_health,red_ammo,yellow_ammo)
+
     
 
 
