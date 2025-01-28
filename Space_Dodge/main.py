@@ -3,12 +3,28 @@ import time
 import random
 import os
 
-
 # Initialize pygame
 pygame.init()
 
 # Initialize font
 pygame.font.init()
+
+# Initialize pygame sounder
+pygame.mixer.init()
+
+
+BULLET_HIT_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'Grenade+1.mp3'))
+
+BULLET_FIRE_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'Laser+1.mp3'))
+
+GAME_OVER_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'Game_Over.wav'))
+
+YELLOW_WINS_SOUND = pygame.mixer.Sound(os.path.join('Assets','Yellow_Wins.mp3'))
+
+RED_WINS_SOUND = pygame.mixer.Sound(os.path.join('Assets','RED_Wins.mp3'))
+
+DRAW_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'Draw.wav'))
+
 
 # Set window size
 
@@ -195,10 +211,18 @@ def handle_bullets(yellow_bullets, red_bullets , yellow, red):
 def display_winner(text):
     if text=='YELLOW WINS!':
         draw_text = WINNER_FONT.render(text,1,YELLOW)
+        YELLOW_WINS_SOUND.play()
+
     elif text=='RED WINS!':
         draw_text = WINNER_FONT.render(text,1,RED)
+        RED_WINS_SOUND.play()
+
     elif text == 'IT IS A DRAW!':
         draw_text = WINNER_FONT.render(text,1,WHITE)
+        DRAW_SOUND.play()
+        pygame.time.delay(3000)
+        pygame.mixer.stop()
+        
     
     GAME_WINDOW.blit(draw_text,( ((WINDOW_WIDTH/2)-(draw_text.get_width()/2))  , (WINDOW_HEIGHT/2 - draw_text.get_height()/2)) )
     pygame.display.update()
@@ -250,16 +274,21 @@ def main():
                     yellow_ammo -=1  # decrease ammo count when shooting
                     yellow_bullet=pygame.Rect(yellow.x+SPACESHIP_WIDTH, yellow.y+(SPACESHIP_HEIGHT//2) , BULLET_WIDTH, BULLET_HEIGHT)
                     yellow_bullets.append(yellow_bullet)
+                    BULLET_FIRE_SOUND.play()
+
                 if event.key == pygame.K_RCTRL and len(red_bullets)<MAX_BULLETS and red_ammo>0:
                     red_ammo -=1  # decrease ammo count when shooting
                     red_bullet=pygame.Rect(red.x,red.y+(SPACESHIP_HEIGHT//2), BULLET_WIDTH, BULLET_HEIGHT)
                     red_bullets.append(red_bullet)
+                    BULLET_FIRE_SOUND.play()
             
             if event.type == YELLOW_HIT:
                 yellow_health -=1
+                BULLET_HIT_SOUND.play()
             
             if event.type == RED_HIT:
                 red_health -=1
+                BULLET_HIT_SOUND.play()
         
         
         winner_text=''
@@ -279,6 +308,9 @@ def main():
                 winner_text = "IT IS A DRAW!"
         
         if winner_text!= '':
+            
+            GAME_OVER_SOUND.play()
+            pygame.time.delay(1000)
             display_winner(winner_text)
             pygame.time.delay(4000)
             pygame.event.clear()
