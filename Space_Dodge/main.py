@@ -79,6 +79,8 @@ pygame.display.set_icon(ICON)
 BACKGROUND_IMAGE = pygame.transform.scale(pygame.image.load(
     os.path.join('Assets', 'space.png')),(WINDOW_WIDTH, WINDOW_HEIGHT))
 
+# Game Speed
+
 FPS = 60
 SPACESHIP_VELOCITY = 5
 BULLET_VELOCITY = 10
