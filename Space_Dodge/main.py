@@ -33,8 +33,6 @@ WINDOW_HEIGHT = 800
 GAME_BORDER_WIDTH = 10
 
 
-
-
 # Define colors
 
 WHITE = (255, 255, 255)
